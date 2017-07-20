@@ -1,0 +1,38 @@
+
+.text:7C8021D0 ; BOOL __stdcall ReadProcessMemory(HANDLE hProcess, LPCVOID lpBaseAddress, LPVOID lpBuffer, SIZE_T nSize, SIZE_T *lpNumberOfBytesRead)
+.text:7C8021D0                 public _ReadProcessMemory@20
+.text:7C8021D0 _ReadProcessMemory@20 proc near         ; CODE XREF: GetProcessVersion(x)+2F12Fp
+.text:7C8021D0                                         ; GetProcessVersion(x)+2F14Ep ...
+.text:7C8021D0
+.text:7C8021D0 hProcess        = dword ptr  8
+.text:7C8021D0 lpBaseAddress   = dword ptr  0Ch
+.text:7C8021D0 lpBuffer        = dword ptr  10h
+.text:7C8021D0 nSize           = dword ptr  14h
+.text:7C8021D0 lpNumberOfBytesRead= dword ptr  18h
+.text:7C8021D0
+.text:7C8021D0                 mov     edi, edi
+.text:7C8021D2                 push    ebp
+.text:7C8021D3                 mov     ebp, esp
+.text:7C8021D5                 lea     eax, [ebp+nSize]
+.text:7C8021D8                 push    eax
+.text:7C8021D9                 push    [ebp+nSize]
+.text:7C8021DC                 push    [ebp+lpBuffer]
+.text:7C8021DF                 push    [ebp+lpBaseAddress]
+.text:7C8021E2                 push    [ebp+hProcess]
+.text:7C8021E5                 call    ds:__imp__NtReadVirtualMemory@20 ; //进NTdll
+.text:7C8021EB                 mov     ecx, [ebp+lpNumberOfBytesRead]
+.text:7C8021EE                 test    ecx, ecx
+.text:7C8021F0                 jnz     short loc_7C8021FD
+
+-----------------------------------------------------------------------------------------------------------------------------------
+; __stdcall NtReadVirtualMemory(x, x, x, x, x)
+.text:7C92D9E0                 public _NtReadVirtualMemory@20
+.text:7C92D9E0 _NtReadVirtualMemory@20 proc near       ; CODE XREF: LdrFindCreateProcessManifest(x,x,x,x,x)+1CCp
+.text:7C92D9E0                                         ; LdrCreateOutOfProcessImage(x,x,x,x)+7Cp ...
+.text:7C92D9E0                 mov     eax, 0BAh       ; NtReadVirtualMemory
+.text:7C92D9E5                 mov     edx, 7FFE0300h
+.text:7C92D9EA                 call    dword ptr [edx]
+.text:7C92D9EC                 retn    14h
+.text:7C92D9EC _NtReadVirtualMemory@20 endp
+
+//eax 是系统调用号，edx 是
