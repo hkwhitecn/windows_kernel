@@ -1,0 +1,144 @@
+.text:00466481 ; =============== S U B R O U T I N E =======================================
+.text:00466481
+.text:00466481 ; 通过中断进入0环，统一的中断号是2Eh，
+.text:00466481 ; 通过中断进入0环时，就已经把3环的SS、ESP、EFLAGs、CS、EIP填入_TREAP_FRAME结构体了
+.text:00466481 ; 下面就是填充_TREAP_FRAME结构体的其他成员了
+.text:00466481 ;    +0x000 DbgEbp           : Uint4B
+.text:00466481 ;    +0x004 DbgEip           : Uint4B
+.text:00466481 ;    +0x008 DbgArgMark       : Uint4B
+.text:00466481 ;    +0x00c DbgArgPointer    : Uint4B
+.text:00466481 ;    +0x010 TempSegCs        : Uint4B
+.text:00466481 ;    +0x014 TempEsp          : Uint4B
+.text:00466481 ;    +0x018 Dr0              : Uint4B
+.text:00466481 ;    +0x01c Dr1              : Uint4B
+.text:00466481 ;    +0x020 Dr2              : Uint4B
+.text:00466481 ;    +0x024 Dr3              : Uint4B
+.text:00466481 ;    +0x028 Dr6              : Uint4B
+.text:00466481 ;    +0x02c Dr7              : Uint4B
+.text:00466481 ;    +0x030 SegGs            : Uint4B
+.text:00466481 ;    +0x034 SegEs            : Uint4B
+.text:00466481 ;    +0x038 SegDs            : Uint4B
+.text:00466481 ;    +0x03c Edx              : Uint4B
+.text:00466481 ;    +0x040 Ecx              : Uint4B
+.text:00466481 ;    +0x044 Eax              : Uint4B
+.text:00466481 ;    +0x048 PreviousPreviousMode : Uint4B
+.text:00466481 ;    +0x04c ExceptionList    : Ptr32 _EXCEPTION_REGISTRATION_RECORD
+.text:00466481 ;    +0x050 SegFs            : Uint4B
+.text:00466481 ;    +0x054 Edi              : Uint4B
+.text:00466481 ;    +0x058 Esi              : Uint4B
+.text:00466481 ;    +0x05c Ebx              : Uint4B
+.text:00466481 ;    +0x060 Ebp              : Uint4B
+.text:00466481 ;    +0x064 ErrCode          : Uint4B
+.text:00466481 ;    +0x068 Eip              : Uint4B
+.text:00466481 ;    +0x06c SegCs            : Uint4B
+.text:00466481 ;    +0x070 EFlags           : Uint4B
+.text:00466481 ;    +0x074 HardwareEsp      : Uint4B
+.text:00466481 ;    +0x078 HardwareSegSs    : Uint4B
+.text:00466481
+.text:00466481 _KiSystemService proc near              ; CODE XREF: ZwAcceptConnectPort(x,x,x,x,x,x)+Cp
+.text:00466481                                         ; ZwAccessCheck(x,x,x,x,x,x,x,x)+Cp ...
+.text:00466481
+.text:00466481 arg_0           = dword ptr  4
+.text:00466481
+.text:00466481                 push    0               ; +0x064 ErrCode：不是什么时候都会填这个值，这里填0是为了对齐
+.text:00466483                 push    ebp             ; +0x060 Ebp
+.text:00466484                 push    ebx             ; +0x05c Ebx
+.text:00466485                 push    esi             ; +0x058 Esi
+.text:00466486                 push    edi             ; +0x054 Edi
+.text:00466487                 push    fs              ; +0x050 SegFs
+.text:00466489                 mov     ebx, 30h
+.text:0046648E                 db      66h
+.text:0046648E                 mov     fs, bx          ; 0x30
+.text:0046648E                                         ; 00110 0 00
+.text:0046648E                                         ; RPL 0
+.text:0046648E                                         ; TI 0
+.text:0046648E                                         ; Index 6
+.text:0046648E                                         ; 也就是查GDT表第6个成员
+.text:0046648E                                         ; ffc093df`f0000001
+.text:0046648E                                         ; Base= ffdff000
+.text:0046648E                                         ; ------------------------------------------------------
+.text:0046648E                                         ; 通过查看_KPCRB获得到的_KPCR就是这个地址 ffdff000
+.text:0046648E                                         ; kd> dd KiProcessorBlock l4
+.text:0046648E                                         ; 80553e40  ffdff120 00000000 00000000 00000000
+.text:0046648E                                         ;
+.text:0046648E                                         ; ffdff120 --> _KPCRB
+.text:0046648E                                         ; _KPCRB 在 _KPCR +0x120 -> _KPCRB
+.text:0046648E                                         ; -----------------------------------------------------------
+.text:0046648E                                         ; kd> dt _KPCR ffdff120-120
+.text:0046648E                                         ; nt!_KPCR
+.text:0046648E                                         ;    +0x000 NtTib            : _NT_TIB
+.text:0046648E                                         ;    +0x01c SelfPcr          : 0xffdff000 _KPCR
+.text:0046648E                                         ;    +0x020 Prcb             : 0xffdff120 _KPRCB
+.text:0046648E                                         ;
+.text:0046648E                                         ; ffdff000 指向的就是 _KPCR 结构体，0环 FS指向 TEB
+.text:00466491                 assume fs:nothing
+.text:00466491                 push    dword ptr ds:0FFDFF000h ; +0x04c ExceptionList  _KPCR -> +0x000 _NT_TIB -> +0x000 ExceptionList
+.text:00466497                 mov     dword ptr ds:0FFDFF000h, 0FFFFFFFFh ; ExceptionList 变为 -1
+.text:004664A1                 mov     esi, ds:0FFDFF124h ; 0FFDFF124 ->  _KPCR -> +0x124 _KTHREAD
+.text:004664A7                 push    dword ptr [esi+140h] ; +0x048 PreviousPreviousMode  ->  _KTHREAD -> +0x140 PreviousMode
+.text:004664AD                 sub     esp, 48h        ; esp - 48h -> _Ktrap_frame +0x000
+.text:004664B0                 mov     ebx, [esp+68h+arg_0] ; esp + 6c ->  +0x06c SegCs
+.text:004664B4                 and     ebx, 1          ; and后 最后一位是0，结构就是0。最后一位是1，结构就是1
+.text:004664B4                                         ; 0环 0
+.text:004664B4                                         ; and
+.text:004664B4                                         ; 0
+.text:004664B4                                         ; 1 -> 0
+.text:004664B4                                         ; 3环 11
+.text:004664B4                                         ; and
+.text:004664B4                                         ; 11
+.text:004664B4                                         ; 01 -> 01
+.text:004664B7                 mov     [esi+140h], bl  ; PreviousPreviousMode 也就是存储 原来是0环还是3环的
+.text:004664B7                                         ; 有些代码0环可以调用，3环也可以调用，但是权限不一样
+.text:004664B7                                         ; 比如 _KUSER_SHARED_DATA 0环可写，3环只读
+.text:004664BD                 mov     ebp, esp        ; EBP指向 _TRAP_FRAME结构体0x000
+.text:004664BF                 mov     ebx, [esi+134h] ; _KTHREAD -> +0x134 TrapFrame        : Ptr32 _KTRAP_FRAME
+.text:004664C5                 mov     [ebp+3Ch], ebx  ; +0x03c Edx -> _KTRAP_FRAME
+.text:004664C8                 mov     [esi+134h], ebp ; 当前_KTRAP_FRAME 存入 _KTHREAD -> +0x134 TrapFrame
+.text:004664CE                 cld                     ; 设置数据传送方向从低地址到高地址
+.text:004664CF                 mov     ebx, [ebp+60h]  ; EBX -> +0x060 Ebp
+.text:004664D2                 mov     edi, [ebp+68h]  ; EDI -> +0x068 Eip
+.text:004664D5                 mov     [ebp+0Ch], edx  ; EDX 是3环通过中断进入0环的时候的 堆栈参数指针
+.text:004664D5                                         ; ---------------------------------------------------------------------------------
+.text:004664D5                                         ; KiIntSystemCall()
+.text:004664D5                                         ;         lea     edx, [esp+arg_4]
+.text:004664D5                                         ;         int     2Eh
+.text:004664D5                                         ;         retn    实际上这是一个独立的 ntdll!KiFastSystemCallRet() 例程
+.text:004664D5                                         ; dt _KUSER_SHARED_DATA 0x7ffe0000
+.text:004664D5                                         ;   +0x300 SystemCall       : 0x7c92e4f0       <--  System Call 调用号 (函数)
+.text:004664D5                                         ;   +0x304 SystemCallReturn : 0x7c92e4f4       <--  System Call return 函数
+.text:004664D5                                         ;
+.text:004664D5                                         ; kd> u 0x7c92e4f0
+.text:004664D5                                         ; ntdll!KiFastSystemCall:
+.text:004664D5                                         ;
+.text:004664D5                                         ; kd> u 0x7c92e4f4
+.text:004664D5                                         ; ntdll!KiFastSystemCallRet:
+.text:004664D8                 mov     dword ptr [ebp+8], 0BADB0D00h ; +0x008 DbgArgMark
+.text:004664DF                 mov     [ebp+0], ebx    ; +0x000 DbgEbp -> 3环Ebp
+.text:004664E2                 mov     [ebp+4], edi    ; +0x004 DbgEip -> 3环Eip
+.text:004664E5                 test    byte ptr [esi+2Ch], 0FFh ;
+.text:004664E5                                         ; _KTHREAD -> +0x02c DebugActive
+.text:004664E5                                         ; 判断DebugActive的值，如果为0，不处在调试状态
+.text:004664E5                                         ; -------------------------------------------------
+.text:004664E5                                         ; TEST 同 AND, 但它不修改运算数, 只改变标志寄存器; 也就是尝试 AND 的结果
+.text:004664E5                                         ; 常用到它对 ZF 的影响(结果为0时ZF=1,结果不为0时ZF=0)
+.text:004664E5                                         ; TEST 之后常常跟着条件跳转指令 JZ、JNZ
+.text:004664E5                                         ; 如果 DebugActive = 0
+.text:004664E5                                         ;     0000 0000
+.text:004664E5                                         ;     1111 1111
+.text:004664E5                                         ; ->  0000 结果为0，ZF = 1，
+.text:004664E5                                         ; 这里可以作为反调试点
+.text:004664E9                 jnz     Dr_kss_a        ; JNZ  ;ZF = 0 则跳转
+.text:004664E9                                         ;       ZF = 1 不跳转
+.text:004664E9                                         ;
+.text:004664E9                                         ; Dr_kss_a  填充调试相关的寄存器
+.text:004664EF
+.text:004664EF loc_4664EF:                             ; CODE XREF: Dr_kss_a+10j
+.text:004664EF                                         ; Dr_kss_a+7Cj
+.text:004664EF                 sti                     ; 开中断
+.text:004664F0                 jmp     loc_4665CD      ; eax存储的是3环进0环的调用号，这里要查系统服务表
+.text:004664F0 _KiSystemService endp                   ; 虽然系统服务号有32位，但使用的只有13位
+.text:004664F0                                         ; 下标为12的地方
+.text:004664F0                                         ; =0 Ntoskrl.exe表
+.text:004664F0                                         ; =1 Win32k.sys表
+.text:004664F0                                         ;
+.text:004664F0                                         ; 例如：NtReadVirtualMemory -> 0BAh
