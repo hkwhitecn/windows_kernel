@@ -35,4 +35,6 @@
 .text:7C92D9EC                 retn    14h
 .text:7C92D9EC _NtReadVirtualMemory@20 endp
 
-//eax 是系统调用号，edx 是
+//eax 是系统调用号，edx 进内核的起始地址
+
+
